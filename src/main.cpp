@@ -1,17 +1,23 @@
 #include <iostream>
 #include <thread>
-#include <chrono>
+#include <memory>
+#include <string_view>
 #include <utils/tsc.h>
+#include <parser/feed_handler.h>
+#include <parser/protocol.h>
 
 int main() {
-    uint64_t start = utils::rdtsc();
+    auto sq = std::make_unique<SPSCQueue<MarketData, 1024*1024>>();
+    
+    std::thread network_thread(run_feed_handler, std::ref(*sq));
 
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    uint64_t end = utils::rdtsc();
+    MarketData data;
+    while(true) {
+        if(sq->pop(data)) {
+            std::cout << "Symbol: " << std::string_view(data.symbol, 4) << "\nPrice: " << data.price << "\nID: " << data.exchange_id << "\n";
+        }
+    }
 
-    uint64_t cycles = end - start;
-    std::cout << "Number of cycles per second: " << cycles << "\n";
-    std::cout << "Clock frequency: " << (cycles/1000000000.0) << " GHz\n";
-
+    network_thread.join();
     return 0;
 }

@@ -21,6 +21,7 @@ int main() {
         }
     });
 
+    // Making the threads concurrent
     producer.join();
     consumer.join();
 
